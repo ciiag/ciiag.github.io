@@ -1,0 +1,13 @@
+# This repo holds ONLY the published website (index.html + assets).
+# Local working material lives in these folders and is intentionally excluded.
+/docs/
+/Plans/
+/prototypes/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

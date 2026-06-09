@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cook Islands Internet Action Group</title>
+<meta name="description" content="A Pacific voice in the global internet, since 2010. Promoting the safe and effective use of the internet and related technologies." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+  :root{
+    --paper:#F7F4EC;       /* bone */
+    --paper-2:#F1ECE0;
+    --ink:#1A1A17;
+    --ink-2:#4A4A42;
+    --accent:#9C2B1B;      /* expedition red */
+    --rule:rgba(26,26,23,.18);
+    --rule-2:rgba(26,26,23,.1);
+    --maxw:1080px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:clamp(17px,1.15vw,19px);line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  ::selection{background:var(--ink);color:var(--paper)}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px;position:relative;z-index:2}
+  .mono{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;font-weight:400}
+  .ital{font-style:italic}
+
+  /* ---- net motifs & seamless map ---- */
+  /* kupenga knot-net divider — a single woven row, faded at the ends */
+  .net-rule{height:18px;width:100%;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='16'%3E%3Cpath d='M0 8 L6.5 1.5 L13 8 L6.5 14.5 Z M13 8 L19.5 1.5 L26 8 L19.5 14.5 Z' fill='none' stroke='%231A1A17' stroke-width='0.8'/%3E%3Cg fill='%231A1A17'%3E%3Ccircle cx='0' cy='8' r='1'/%3E%3Ccircle cx='13' cy='8' r='1'/%3E%3Ccircle cx='26' cy='8' r='1'/%3E%3Ccircle cx='6.5' cy='1.5' r='1'/%3E%3Ccircle cx='6.5' cy='14.5' r='1'/%3E%3Ccircle cx='19.5' cy='1.5' r='1'/%3E%3Ccircle cx='19.5' cy='14.5' r='1'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat:repeat-x;background-position:center;opacity:.5;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
+            mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+  /* the chart — Leaflet, stripped of all map chrome so it reads as part of the page */
+  /* full-bleed background chart — spans the viewport, sits behind the hero text; anchored to the grid so its top edge falls below the meta divider */
+  #cookmap{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100vw;background:var(--paper);cursor:grab;z-index:-1;pointer-events:auto}
+  #cookmap:active{cursor:grabbing}
+  .leaflet-container{background:var(--paper)!important;font-family:"IBM Plex Mono",monospace;outline:none}
+  .leaflet-container a{color:inherit}
+  .leaflet-interactive:focus{outline:none}
+  .island-label{background:none;border:0;box-shadow:none;padding:0;margin:0;
+    font-family:"IBM Plex Mono",monospace;font-size:.56rem;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--ink-2);white-space:nowrap;text-shadow:0 0 3px var(--paper),0 0 3px var(--paper),0 0 2px var(--paper)}
+  .island-label.cap{color:var(--accent);font-weight:500}
+  .leaflet-tooltip-top:before,.leaflet-tooltip-bottom:before,
+  .leaflet-tooltip-left:before,.leaflet-tooltip-right:before{display:none}
+  .leaflet-control-zoom{border:0!important;box-shadow:none!important;margin:34px!important}
+  .leaflet-control-zoom a{background:transparent!important;color:var(--ink-2)!important;border:1px solid var(--rule)!important;
+    width:24px!important;height:24px!important;line-height:23px!important;font-size:14px!important;border-radius:0!important;font-weight:300}
+  .leaflet-control-zoom a:hover{color:var(--accent)!important;border-color:var(--accent)!important}
+  .leaflet-control-zoom a:first-child{border-bottom:0!important}
+  .map-cap{font-family:"IBM Plex Mono";font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin-top:16px;line-height:1.75;max-width:30ch}
+  .map-cap b{color:var(--accent);font-weight:500}
+  .map-cap .hint{display:block;margin-top:6px;opacity:.6;letter-spacing:.06em}
+  /* net background for the dark horizon section */
+  .net-bg{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+
+  /* hairline frame around whole page */
+  .frame{position:fixed;inset:16px;border:1px solid var(--rule);pointer-events:none;z-index:40}
+  .frame::before,.frame::after{content:"✦";position:absolute;color:var(--accent);font-size:11px;line-height:1}
+  .frame::before{top:-6px;left:-6px}.frame::after{bottom:-6px;right:-6px}
+
+  /* NAV */
+  nav{position:fixed;top:16px;left:16px;right:16px;z-index:50;background:var(--paper);transition:.4s}
+  nav.scrolled{border-bottom:1px solid var(--rule)}
+  .nav-in{max-width:var(--maxw);margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-family:"IBM Plex Mono";font-weight:500;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;display:flex;gap:11px;align-items:center}
+  .brand .star{width:16px;height:16px;color:var(--accent)}
+  .navlinks{display:flex;gap:34px;align-items:center}
+  .navlinks a{font-family:"IBM Plex Mono";font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);transition:.25s;position:relative}
+  .navlinks a:hover{color:var(--ink)}
+  .navlinks a::after{content:"";position:absolute;left:0;bottom:-4px;width:0;height:1px;background:var(--accent);transition:.3s}
+  .navlinks a:hover::after{width:100%}
+  .menu-btn{display:none;background:none;border:0;font-family:"IBM Plex Mono";cursor:pointer}
+
+  /* HERO */
+  header.hero{padding:178px 0 90px;position:relative;overflow:hidden}
+  header.hero .wrap{pointer-events:none}
+  header.hero .wrap a{pointer-events:auto}
+  .hero-meta{display:flex;justify-content:space-between;color:var(--ink-2);border-bottom:1px solid var(--ink);padding-bottom:14px;margin-bottom:38px;flex-wrap:wrap;gap:12px}
+  .hero-grid{display:grid;grid-template-columns:1fr 1.06fr;gap:54px;align-items:stretch;min-height:70vh;position:relative}
+  .hero-left{display:flex;flex-direction:column;justify-content:space-between;padding:6px 0 10px}
+  h1.htitle{font-family:"Newsreader";font-weight:300;font-size:clamp(2.2rem,4.4vw,4.2rem);line-height:1.05;letter-spacing:-.02em;max-width:13ch;text-shadow:0 0 22px var(--paper),0 0 10px var(--paper),0 0 4px var(--paper)}
+  h1.htitle .ital{font-style:italic}
+  h1.htitle .red{color:var(--accent)}
+  .hero-intro{margin-top:36px;max-width:34ch}
+  .hero-lead{font-size:clamp(1.05rem,1.35vw,1.3rem);font-weight:300;line-height:1.5;text-shadow:0 0 14px var(--paper),0 0 6px var(--paper)}
+  .hero-lead .ital{font-style:italic;color:var(--accent)}
+  .arrow{display:inline-block;margin-top:24px;font-family:"IBM Plex Mono";font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--ink);padding-bottom:3px;transition:.25s}
+  .arrow:hover{color:var(--accent);border-color:var(--accent)}
+  .hero-right{display:flex;flex-direction:column;justify-content:flex-end}
+  .star-mark{width:54px;height:54px;color:var(--accent);margin-bottom:24px}
+
+  /* SECTION */
+  section{padding:104px 0;position:relative}
+  .sec-meta{display:flex;justify-content:space-between;align-items:baseline;color:var(--ink-2);border-bottom:1px solid var(--ink);padding-bottom:12px;margin-bottom:54px}
+  .sec-meta .t{font-family:"IBM Plex Mono";font-size:.72rem;letter-spacing:.16em;text-transform:uppercase}
+  h2.stitle{font-family:"Newsreader";font-weight:300;font-size:clamp(1.9rem,4.4vw,3.4rem);line-height:1.06;letter-spacing:-.015em;max-width:20ch}
+  h2.stitle .ital{font-style:italic}
+  .lead{font-size:clamp(1.1rem,1.5vw,1.35rem);font-weight:300;line-height:1.55;max-width:60ch}
+
+  /* about */
+  .about-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:60px;align-items:start;margin-top:10px}
+  .about p{font-weight:300}.about p+p{margin-top:22px}
+  .ledger{border-top:1px solid var(--ink)}
+  .lrow{display:flex;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--rule-2)}
+  .lrow dt{font-family:"IBM Plex Mono";font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);padding-top:4px}
+  .lrow dd{font-style:italic;text-align:right;font-size:1.05rem}
+
+  /* WORK — numbered register */
+  .reg{border-top:1px solid var(--ink)}
+  .reg-row{display:grid;grid-template-columns:80px 1fr 1.3fr;gap:30px;padding:36px 0;border-bottom:1px solid var(--rule);align-items:baseline;transition:.35s}
+  .reg-row:hover{background:var(--paper-2);padding-left:14px;padding-right:14px}
+  .reg-row .rn{font-family:"IBM Plex Mono";font-size:.8rem;color:var(--accent);letter-spacing:.06em}
+  .reg-row h3{font-family:"Newsreader";font-weight:400;font-size:clamp(1.4rem,2.4vw,2rem);line-height:1.1}
+  .reg-row .desc{color:var(--ink-2);font-weight:300}
+  .reg-row .desc .meta{display:block;margin-top:14px;font-family:"IBM Plex Mono";font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+
+  /* HORIZON */
+  .horizon{background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+  /* editorial drop-cap */
+  .dropcap::first-letter{float:left;font-size:3.5em;line-height:.72;font-weight:300;font-style:italic;color:var(--accent);padding:8px 12px 0 0}
+  .horizon .sec-meta{color:rgba(247,244,236,.6);border-color:rgba(247,244,236,.4)}
+  .horizon h2.stitle{color:var(--paper)}
+  .horizon .lead{color:rgba(247,244,236,.75)}
+  .kupenga{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:50px;align-items:start}
+  .knot{font-family:"Newsreader";font-weight:300;font-size:clamp(1.35rem,2.4vw,1.9rem);line-height:1.42;font-style:italic}
+  .knot b{font-style:normal;font-weight:400;color:#E8A99B}
+  .roles{list-style:none;margin-top:10px;border-top:1px solid rgba(247,244,236,.3)}
+  .roles li{padding:20px 0;border-bottom:1px solid rgba(247,244,236,.16);display:grid;grid-template-columns:34px 1fr;gap:16px}
+  .roles .n{font-family:"IBM Plex Mono";font-size:.74rem;color:#E8A99B}
+  .roles b{font-weight:400}
+  .roles span{display:block;color:rgba(247,244,236,.6);font-weight:300;font-size:.96rem;margin-top:3px}
+
+  /* QUOTE */
+  .quote{text-align:center;padding:130px 0}
+  .quote .star-mark{margin:0 auto 36px}
+  .quote blockquote{font-family:"Newsreader";font-weight:300;font-size:clamp(1.7rem,4vw,3rem);line-height:1.22;letter-spacing:-.01em;max-width:22ch;margin:0 auto}
+  .quote blockquote .ital{font-style:italic;color:var(--accent)}
+  .quote .cite{margin-top:40px;color:var(--ink-2)}
+  .quote .cite .nm{font-style:italic;font-size:1.1rem;color:var(--ink)}
+
+  /* REACH */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:10px;border-top:1px solid var(--ink)}
+  .stat{padding:30px 24px 30px 0;border-right:1px solid var(--rule-2)}
+  .stat:last-child{border-right:0}
+  .stat .big{font-family:"Newsreader";font-weight:300;font-size:clamp(2.6rem,5vw,4rem);line-height:1;letter-spacing:-.02em}
+  .stat .big sup{font-size:.4em;color:var(--accent);vertical-align:super}
+  .stat .cap{color:var(--ink-2);font-size:.86rem;font-weight:300;margin-top:10px}
+  .log{margin-top:70px;border-top:1px solid var(--ink)}
+  .logrow{display:grid;grid-template-columns:130px 1fr;gap:28px;padding:24px 0;border-bottom:1px solid var(--rule-2);align-items:baseline;transition:.3s}
+  .logrow:hover{padding-left:12px}
+  .logrow .yr{font-family:"IBM Plex Mono";font-size:.74rem;letter-spacing:.06em;color:var(--accent)}
+  .logrow b{font-weight:400}
+  .logrow span{display:block;color:var(--ink-2);font-weight:300;font-size:.96rem;margin-top:4px}
+
+  /* PEOPLE */
+  .leaders{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:14px}
+  .leader .ph{aspect-ratio:1/1;overflow:hidden;filter:grayscale(1) contrast(1.05);transition:.6s;border:1px solid var(--rule)}
+  .leader:hover .ph{filter:grayscale(0) contrast(1)}
+  .leader .ph img{width:100%;height:100%;object-fit:cover}
+  .leader h4{font-family:"Newsreader";font-weight:400;font-size:1.4rem;margin-top:20px}
+  .leader .pos{font-family:"IBM Plex Mono";font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-top:6px}
+  .leader p{color:var(--ink-2);font-weight:300;font-size:.95rem;margin-top:12px}
+  .committee{margin-top:60px;border-top:1px solid var(--ink);padding-top:26px;display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}
+  .committee .n{font-family:"Newsreader";font-style:italic;font-size:1.6rem}
+
+  /* JOIN */
+  .join{text-align:center;position:relative}
+  .join .star-mark{margin:0 auto 30px}
+  .join h2{font-family:"Newsreader";font-weight:300;font-size:clamp(2.2rem,5.5vw,4rem);line-height:1.04;max-width:18ch;margin:0 auto 22px}
+  .join h2 .ital{font-style:italic;color:var(--accent)}
+  .join p{max-width:48ch;margin:0 auto 38px;color:var(--ink-2);font-weight:300;font-size:1.1rem}
+  .joinbtn{display:inline-flex;align-items:center;gap:12px;font-family:"IBM Plex Mono";font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--ink);padding:16px 32px;transition:.3s}
+  .joinbtn:hover{background:var(--ink);color:var(--paper)}
+  .joinbtn.alt{border:0;border-bottom:1px solid var(--ink);padding:16px 6px}
+  .joinbtn.alt:hover{background:none;color:var(--accent);border-color:var(--accent)}
+
+  footer{border-top:1px solid var(--ink);padding:56px 0 40px;position:relative;overflow:hidden}
+  .fgrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;padding-bottom:40px}
+  footer .fb{font-family:"IBM Plex Mono";font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:18px;display:flex;gap:10px;align-items:center}
+  footer .fb .star{width:14px;height:14px;color:var(--accent)}
+  footer h5{font-family:"IBM Plex Mono";font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-bottom:14px}
+  footer ul{list-style:none}footer li{padding:5px 0;font-size:.94rem;font-weight:300}
+  footer a:hover{color:var(--accent)}
+  .fbot{border-top:1px solid var(--rule);padding-top:24px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-family:"IBM Plex Mono";font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+
+  .rv{opacity:0;transform:translateY(20px);transition:opacity 1s cubic-bezier(.2,.7,.2,1),transform 1s cubic-bezier(.2,.7,.2,1)}
+  .rv.in{opacity:1;transform:none}
+
+  @media(max-width:860px){
+    .navlinks{display:none}.menu-btn{display:block}
+    .hero-grid,.about-grid,.kupenga{grid-template-columns:1fr;gap:34px}
+    .hero-grid{min-height:58vh}
+    .reg-row{grid-template-columns:50px 1fr;gap:16px}.reg-row .desc{grid-column:1/-1}
+    .stats{grid-template-columns:1fr 1fr;gap:0}
+    .stat{border-bottom:1px solid var(--rule-2);padding-right:18px}
+    .leaders{grid-template-columns:1fr;gap:30px}
+    .logrow{grid-template-columns:90px 1fr;gap:16px}
+    .frame{inset:8px}nav{left:8px;right:8px;top:8px}
+  }
+</style>
+</head>
+<body>
+<div class="frame"></div>
+
+<!-- line-art motif library -->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="star">
+    <path d="M100 4 L108 92 L196 100 L108 108 L100 196 L92 108 L4 100 L92 92 Z" fill="currentColor"/>
+    <circle cx="100" cy="100" r="96" fill="none" stroke="currentColor" stroke-width="2"/>
+  </g>
+  <!-- kupenga: fishing net -->
+  <pattern id="netmesh" width="32" height="32" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <path d="M0 16 H32 M16 0 V32" stroke="#F7F4EC" stroke-width="0.6" fill="none"/>
+  </pattern>
+</defs></svg>
+
+<nav id="nav">
+  <div class="nav-in">
+    <a class="brand" href="#top"><svg class="star" viewBox="0 0 200 200"><use href="#star"/></svg> CIIAG — Est. 2010</a>
+    <div class="navlinks">
+      <a href="#about">Who</a><a href="#work">Work</a><a href="#horizon">Horizon</a><a href="#reach">Reach</a><a href="#people">People</a><a href="#join">Join</a>
+    </div>
+    <button class="menu-btn">Menu</button>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-meta mono">
+      <span>Cook Islands Internet Action Group</span>
+      <span>Rarotonga · 21°12′S 159°46′W</span>
+      <span>No. I343</span>
+    </div>
+    <div class="hero-grid">
+      <div id="cookmap" role="img" aria-label="Chart of the 15 Cook Islands"></div>
+      <div class="hero-left">
+        <h1 class="htitle">A Pacific voice in the <span class="ital red">global internet</span>, since 2010.</h1>
+        <div class="hero-intro">
+          <p class="hero-lead">We promote the safe and effective use of the internet and related technologies — and make sure the Pacific is not just <span class="ital">connected</span> to the network, but helps decide how it evolves.</p>
+          <a class="arrow" href="#work">Read the record →</a>
+        </div>
+      </div>
+      <div class="hero-right">
+        <figcaption class="map-cap">Te Kūki 'Āirani — <b>15 islands</b> across nearly 2 million km² of ocean<span class="hint">drag · zoom to explore the coastlines →</span></figcaption>
+      </div>
+    </div>
+    <div class="net-rule" style="margin-top:54px"></div>
+  </div>
+</header>
+
+<section class="about" id="about">
+  <div class="wrap">
+    <div class="sec-meta rv"><span class="t">§ 01 — Who we are</span><span class="mono">Mandate</span></div>
+    <div class="about-grid">
+      <div class="rv">
+        <h2 class="stitle" style="margin-bottom:30px">A small society with a seat at the <span class="ital">world's table.</span></h2>
+        <p class="lead dropcap">Founded in 2010 and incorporated under Cook Islands law, CIIAG exists to promote the safe and effective use of the internet — for Rarotonga, for the Pa Enua, and for the wider Pacific.</p>
+        <p style="margin-top:22px;color:var(--ink-2)">We are an At-Large Structure allied to ICANN and a partner of the Pacific Islands Chapter of the Internet Society. Our members sit on global boards, shape national digital strategy, train the next generation, and represent the Pacific where the rules of the network are written. Membership is honorary, and open to all who share the kaupapa.</p>
+      </div>
+      <dl class="ledger rv">
+        <div class="lrow"><dt>Established</dt><dd>5 July 2010</dd></div>
+        <div class="lrow"><dt>Legal status</dt><dd>Incorporated Society</dd></div>
+        <div class="lrow"><dt>Register no.</dt><dd>I343</dd></div>
+        <div class="lrow"><dt>Mandate</dt><dd>Safe &amp; effective internet</dd></div>
+        <div class="lrow"><dt>Affiliation</dt><dd>ICANN · PICISOC</dd></div>
+        <div class="lrow"><dt>Committee</dt><dd>22 members</dd></div>
+        <div class="lrow"><dt>Seat</dt><dd>Rarotonga</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section id="work">
+  <div class="wrap">
+    <div class="sec-meta rv"><span class="t">§ 02 — What we do</span><span class="mono">Four lines of work</span></div>
+    <div class="reg">
+      <div class="reg-row rv"><span class="rn">i.</span><h3>Digital inclusion &amp; capacity</h3><div class="desc">Bringing skills, safety and opportunity from Rarotonga out to the Pa Enua.<span class="meta">Cyber training · CEIT robotics · Smartie payments · national digital strategy</span></div></div>
+      <div class="reg-row rv"><span class="rn">ii.</span><h3>A Pacific voice in internet governance</h3><div class="desc">Small island, full seat at the table — board seats and chairs across the bodies that steward the global internet.<span class="meta">ISOC Board · DotAsia Board · GFCE Pacific Hub · ICANN At-Large</span></div></div>
+      <div class="reg-row rv"><span class="rn">iii.</span><h3>Language &amp; knowledge, carried forward</h3><div class="desc">Cook Islands Māori built into the technology itself — and support for community-owned knowledge keeping.<span class="meta">Māori IDNs (ā ē ī ō ū) · translation &amp; hymn apps</span></div></div>
+      <div class="reg-row rv"><span class="rn">iv.</span><h3>A self-sustaining digital future</h3><div class="desc">The only Pacific applicant in ICANN's next round of new top-level domains, with DotAsia.<span class="meta">New gTLD round 2026 · ICANN Applicant Support Programme</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="horizon" id="horizon">
+  <svg class="net-bg" preserveAspectRatio="none"><rect width="100%" height="100%" fill="url(#netmesh)" opacity="0.11"/></svg>
+  <div class="wrap">
+    <div class="sec-meta rv"><span class="t">§ 03 — The horizon</span><span class="mono">Te Kupenga</span></div>
+    <h2 class="stitle rv">The net that <span class="ital">holds</span> what matters.</h2>
+    <div class="kupenga">
+      <div class="rv">
+        <p class="knot"><b>Kupenga</b> is the fishing net — and the net of knowledge. The same word reaches the Inter-net. CIIAG helps weave both: connecting the Pacific outward, and helping each island hold its own stories, language and protocols close.</p>
+      </div>
+      <div class="rv">
+        <ul class="roles">
+          <li><span class="n">01</span><div><b>Community engagement</b><span>Relationships across the 12 inhabited islands, built over fifteen years.</span></div></li>
+          <li><span class="n">02</span><div><b>Digital inclusion</b><span>Meeting communities where they are — skills, safety, access and trust.</span></div></li>
+          <li><span class="n">03</span><div><b>Sovereignty by design</b><span>Infrastructure open, knowledge sovereign — each community keeps authority over its own.</span></div></li>
+          <li><span class="n">04</span><div><b>Pacific connection</b><span>Linking local work into regional cooperation across Te Moana Nui.</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="quote">
+  <div class="wrap">
+    <svg class="star-mark" viewBox="0 0 200 200"><use href="#star"/></svg>
+    <blockquote class="rv">The Pacific must not just be <span class="ital">connected</span> to the internet — but a <span class="ital">leader</span> in defining how it evolves.</blockquote>
+    <div class="cite rv"><span class="nm">Save Vocea</span><br><span class="mono">ICANN Vice-President · Stakeholder Engagement, Oceania</span></div>
+  </div>
+</section>
+
+<section id="reach">
+  <div class="wrap">
+    <div class="sec-meta rv"><span class="t">§ 04 — Our reach</span><span class="mono">The log</span></div>
+    <div class="stats rv">
+      <div class="stat"><div class="big">15<sup>yr</sup></div><div class="cap">serving the Cook Islands internet community</div></div>
+      <div class="stat"><div class="big">3</div><div class="cap">global boards &amp; hubs held by members</div></div>
+      <div class="stat"><div class="big">12</div><div class="cap">inhabited islands within our reach</div></div>
+      <div class="stat"><div class="big">1<sup>st</sup></div><div class="cap">and only Pacific applicant, ICANN next gTLD round</div></div>
+    </div>
+    <div class="log">
+      <div class="logrow rv"><span class="yr">2024</span><div><b>Gold — World Robot Olympiad, Athens</b><span>The CEIT girls' team brings home gold for the Cook Islands.</span></div></div>
+      <div class="logrow rv"><span class="yr">2024</span><div><b>Appointment to the Internet Society Board</b><span>A Cook Islands voice in the global governance of the internet.</span></div></div>
+      <div class="logrow rv"><span class="yr">2024</span><div><b>Director, GFCE Pacific Hub</b><span>Leading regional cyber capacity-building across the Pacific.</span></div></div>
+      <div class="logrow rv"><span class="yr">2024</span><div><b>Smartie — first Cook Islands digital payments solution</b><span>Homegrown fintech, with a tourism super-app in development.</span></div></div>
+      <div class="logrow rv"><span class="yr">2023–24</span><div><b>National Digital Strategy &amp; eCommerce Acceleration Workplan</b><span>Helping shape the country's digital direction.</span></div></div>
+      <div class="logrow rv"><span class="yr">ongoing</span><div><b>ICANN · IGF · APRIGF — Brisbane, Taiwan, Wellington</b><span>Representing the Pacific in the multistakeholder forums of the internet.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="people">
+  <div class="wrap">
+    <div class="sec-meta rv"><span class="t">§ 05 — Leadership</span><span class="mono">Office bearers</span></div>
+    <div class="leaders">
+      <div class="leader rv"><div class="ph"><img src="assets/maureen.jpg" alt="Maureen Hilyard"></div><h4>Maureen Hilyard</h4><div class="pos">President &amp; Chair</div><p>Internet Society Board, DotAsia Board and ICANN At-Large — a leading Pacific voice in internet governance.</p></div>
+      <div class="leader rv"><div class="ph"><img src="assets/ano.jpg" alt="Anonga Tisam"></div><h4>Anonga Tisam</h4><div class="pos">Vice President</div><p>Builder of the Smartie payments platform and Cook Islands Māori language and hymn apps.</p></div>
+      <div class="leader rv"><div class="ph"><img src="assets/pua-hunter.png" alt="Pua Hunter"></div><h4>Pua Hunter</h4><div class="pos">Secretary-Treasurer</div><p>Director of the GFCE Pacific Hub, driving cyber capacity-building across the region.</p></div>
+    </div>
+    <div class="committee rv">
+      <div class="n">A committee of twenty-two.</div>
+      <span style="color:var(--ink-2);font-weight:300;max-width:38ch">Volunteers across Rarotonga, the Pa Enua and the diaspora — honorary, and open to all who share the kaupapa.</span>
+    </div>
+  </div>
+</section>
+
+<section class="join" id="join">
+  <div class="net-rule" style="position:absolute;top:0;left:0"></div>
+  <div class="wrap">
+    <svg class="star-mark" viewBox="0 0 200 200"><use href="#star"/></svg>
+    <h2 class="rv">Add your voice to the <span class="ital">kaupapa.</span></h2>
+    <p class="rv">Membership is open to all who care about a safe, open and inclusive internet for the Cook Islands and the Pacific — and includes membership of the Pacific Islands Chapter of the Internet Society.</p>
+    <div class="rv" style="display:flex;gap:26px;justify-content:center;flex-wrap:wrap;align-items:center">
+      <a class="joinbtn" href="mailto:hello@ciiag.ck">Join our email list</a>
+      <a class="joinbtn alt" href="#about">Learn more →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <div class="fb"><svg class="star" viewBox="0 0 200 200"><use href="#star"/></svg> Cook Islands Internet Action Group</div>
+        <p style="max-width:38ch;font-weight:300;font-size:.96rem;color:var(--ink-2)">Promoting the safe and effective use of the internet and related technologies — from the Cook Islands to the world, since 2010.</p>
+      </div>
+      <div><h5>Sections</h5><ul><li><a href="#about">Who we are</a></li><li><a href="#work">What we do</a></li><li><a href="#horizon">The horizon</a></li><li><a href="#people">Leadership</a></li></ul></div>
+      <div><h5>Allied with</h5><ul><li>ICANN (At-Large)</li><li>Internet Society · PICISOC</li><li>DotAsia</li><li>GFCE Pacific Hub</li></ul></div>
+    </div>
+    <div class="fbot"><span>Cook Islands Internet Action Group Inc. · Reg. I343 · Rarotonga</span><span>Coastlines: geoBoundaries · Natural Earth</span><span>Kia orāna</span></div>
+  </div>
+</footer>
+
+<script id="cook-data" type="application/json">{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-157.925,-9.0835],[-157.9235,-9.0818],[-157.9238,-9.0797],[-157.9251,-9.081],[-157.9277,-9.0815],[-157.9278,-9.0825],[-157.9266,-9.0835],[-157.925,-9.0835]]],[[[-157.9878,-9.052],[-157.9866,-9.0548],[-157.9847,-9.0568],[-157.9823,-9.0603],[-157.9809,-9.0617],[-157.9791,-9.0647],[-157.9771,-9.0683],[-157.9756,-9.0705],[-157.9747,-9.0726],[-157.9716,-9.0779],[-157.9684,-9.082],[-157.9677,-9.0832],[-157.9664,-9.0837],[-157.9661,-9.0808],[-157.9665,-9.0798],[-157.9682,-9.0787],[-157.971,-9.0747],[-157.9721,-9.0735],[-157.9732,-9.0711],[-157.9736,-9.0694],[-157.9754,-9.0671],[-157.9768,-9.0643],[-157.9781,-9.0624],[-157.9796,-9.0609],[-157.9803,-9.0596],[-157.9811,-9.0594],[-157.9826,-9.057],[-157.9844,-9.0559],[-157.9843,-9.0548],[-157.9862,-9.0514],[-157.9872,-9.0483],[-157.9872,-9.0472],[-157.9891,-9.0432],[-157.9924,-9.0381],[-157.9961,-9.0335],[-158.0004,-9.03],[-158.0033,-9.0282],[-158.0038,-9.0301],[-158.0015,-9.0312],[-157.9997,-9.0333],[-157.9976,-9.0349],[-157.9943,-9.0383],[-157.993,-9.04],[-157.9906,-9.044],[-157.9891,-9.0478],[-157.9878,-9.052]]],[[[-158.0042,-9.029],[-158.0038,-9.0276],[-158.0055,-9.0259],[-158.0059,-9.0285],[-158.0042,-9.029]]],[[[-158.0229,-9.0246],[-158.0251,-9.0253],[-158.0246,-9.0268],[-158.0231,-9.0268],[-158.0223,-9.026],[-158.0229,-9.0246]]],[[[-157.882,-9.0271],[-157.8826,-9.0257],[-157.8855,-9.0232],[-157.8869,-9.0236],[-157.8852,-9.0263],[-157.8856,-9.0284],[-157.8856,-9.0309],[-157.8861,-9.0327],[-157.8883,-9.0359],[-157.8902,-9.0368],[-157.89,-9.0377],[-157.888,-9.037],[-157.8861,-9.035],[-157.8837,-9.0337],[-157.8829,-9.0329],[-157.8827,-9.0292],[-157.882,-9.0271]]],[[[-157.8937,-9.0129],[-157.8946,-9.0099],[-157.8956,-9.0085],[-157.8964,-9.0094],[-157.8966,-9.0122],[-157.8957,-9.0137],[-157.8946,-9.0141],[-157.8937,-9.0155],[-157.8923,-9.0148],[-157.8937,-9.0129]]],[[[-157.8981,-9.0035],[-157.8996,-9.0041],[-157.8996,-9.0059],[-157.8954,-9.008],[-157.8981,-9.0035]]],[[[-157.9097,-8.9918],[-157.9141,-8.9862],[-157.9155,-8.9831],[-157.9167,-8.9789],[-157.9189,-8.9795],[-157.9203,-8.9794],[-157.9194,-8.9827],[-157.918,-8.9844],[-157.9163,-8.9846],[-157.9161,-8.9861],[-157.9173,-8.9863],[-157.9177,-8.9872],[-157.9157,-8.9894],[-157.9147,-8.9922],[-157.9064,-8.9971],[-157.9056,-8.9997],[-157.9017,-9.0002],[-157.9017,-9.0013],[-157.8994,-9.003],[-157.8988,-9.0026],[-157.8998,-9.0006],[-157.9017,-8.9981],[-157.9032,-8.9968],[-157.9085,-8.9931],[-157.9097,-8.9918]]],[[[-158.0307,-9.0181],[-158.0305,-9.0205],[-158.0292,-9.0234],[-158.0281,-9.0245],[-158.0266,-9.0247],[-158.0255,-9.0242],[-158.025,-9.0223],[-158.0256,-9.0208],[-158.027,-9.0194],[-158.0283,-9.0188],[-158.0294,-9.0174],[-158.0301,-9.0147],[-158.0307,-9.014],[-158.0318,-9.0113],[-158.033,-9.0104],[-158.0342,-9.0082],[-158.0364,-9.0052],[-158.0374,-9.0022],[-158.0382,-9.0014],[-158.0389,-8.9995],[-158.0405,-8.9973],[-158.0411,-8.9971],[-158.0423,-8.9948],[-158.0431,-8.9944],[-158.0444,-8.9923],[-158.0474,-8.9885],[-158.0484,-8.9858],[-158.0519,-8.9813],[-158.0529,-8.9788],[-158.053,-8.9763],[-158.0516,-8.9749],[-158.0522,-8.974],[-158.0553,-8.9746],[-158.0561,-8.9768],[-158.056,-8.9789],[-158.0542,-8.9817],[-158.0489,-8.9877],[-158.0442,-8.9949],[-158.0432,-8.9958],[-158.0398,-9.0019],[-158.0385,-9.0037],[-158.0379,-9.0056],[-158.0347,-9.0116],[-158.0328,-9.0144],[-158.0319,-9.0166],[-158.0307,-9.0181]]],[[[-157.9259,-8.955],[-157.9268,-8.9555],[-157.9264,-8.9593],[-157.9247,-8.9622],[-157.9229,-8.9642],[-157.9223,-8.967],[-157.9227,-8.9691],[-157.9216,-8.9698],[-157.9226,-8.963],[-157.9232,-8.9618],[-157.9226,-8.9609],[-157.9233,-8.9599],[-157.9254,-8.9551],[-157.9259,-8.955]]],[[[-157.9273,-8.9512],[-157.9278,-8.9517],[-157.927,-8.9542],[-157.9259,-8.954],[-157.9266,-8.9512],[-157.9273,-8.9512]]],[[[-157.9293,-8.9455],[-157.9288,-8.9441],[-157.9279,-8.9436],[-157.9273,-8.9416],[-157.9282,-8.941],[-157.9297,-8.9434],[-157.9293,-8.9455]]],[[[-157.9643,-8.9331],[-157.9636,-8.9347],[-157.964,-8.936],[-157.9616,-8.9371],[-157.9603,-8.9373],[-157.958,-8.9386],[-157.9559,-8.9389],[-157.9541,-8.9387],[-157.9517,-8.9391],[-157.9495,-8.939],[-157.9476,-8.9395],[-157.9459,-8.9394],[-157.9453,-8.9388],[-157.9428,-8.9381],[-157.9398,-8.9364],[-157.9362,-8.9354],[-157.9344,-8.9365],[-157.9334,-8.9363],[-157.9344,-8.9343],[-157.9354,-8.9342],[-157.9405,-8.9356],[-157.9488,-8.9374],[-157.9512,-8.9375],[-157.9553,-8.9374],[-157.9587,-8.9364],[-157.9625,-8.934],[-157.9643,-8.9331]]],[[[-158.0497,-8.9309],[-158.0504,-8.9311],[-158.0503,-8.9339],[-158.0496,-8.9347],[-158.0494,-8.9375],[-158.0478,-8.9413],[-158.0462,-8.9415],[-158.0461,-8.9377],[-158.0484,-8.9348],[-158.0497,-8.9309]]],[[[-158.0095,-8.9222],[-158.0116,-8.9219],[-158.0141,-8.9237],[-158.0137,-8.9248],[-158.0115,-8.9232],[-158.0113,-8.9222],[-158.0095,-8.9222]]],[[[-158.0358,-8.9243],[-158.0397,-8.9225],[-158.045,-8.919],[-158.047,-8.9186],[-158.0465,-8.92],[-158.045,-8.9212],[-158.0446,-8.9226],[-158.0414,-8.9232],[-158.0401,-8.9241],[-158.0374,-8.9249],[-158.0363,-8.9256],[-158.0351,-8.9272],[-158.0312,-8.9281],[-158.0275,-8.9278],[-158.0254,-8.9282],[-158.0226,-8.9274],[-158.0215,-8.9277],[-158.018,-8.9263],[-158.0186,-8.9256],[-158.0225,-8.9264],[-158.0239,-8.9263],[-158.0251,-8.9268],[-158.0283,-8.9266],[-158.0325,-8.9256],[-158.0358,-8.9243]]],[[[-158.0015,-8.9189],[-158.0027,-8.918],[-158.0039,-8.9181],[-158.0069,-8.9202],[-158.0065,-8.9211],[-158.004,-8.9197],[-158.0018,-8.9196],[-158.0015,-8.9189]]],[[[-157.9986,-8.9169],[-158,-8.9175],[-157.9998,-8.9191],[-157.997,-8.9187],[-157.9912,-8.92],[-157.9885,-8.9215],[-157.9878,-8.9216],[-157.984,-8.9239],[-157.9835,-8.9251],[-157.9825,-8.9252],[-157.9813,-8.9263],[-157.9778,-8.9279],[-157.9756,-8.9296],[-157.9742,-8.9309],[-157.9714,-8.9318],[-157.9698,-8.9327],[-157.9687,-8.9339],[-157.9671,-8.9345],[-157.9667,-8.9335],[-157.9648,-8.9327],[-157.9673,-8.9315],[-157.9751,-8.928],[-157.981,-8.9247],[-157.9849,-8.9214],[-157.9879,-8.9195],[-157.9911,-8.9182],[-157.9946,-8.9171],[-157.9986,-8.9169]]]]},"properties":{"name":"Penrhyn","group":"N","lon":-158.05,"lat":-9.01,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-161.072,-10.03],[-161.0726,-10.0272],[-161.0744,-10.0246],[-161.0773,-10.0224],[-161.081,-10.0206],[-161.0853,-10.0196],[-161.09,-10.0192],[-161.0947,-10.0196],[-161.099,-10.0206],[-161.1027,-10.0224],[-161.1056,-10.0246],[-161.1074,-10.0272],[-161.108,-10.03],[-161.1074,-10.0328],[-161.1056,-10.0354],[-161.1027,-10.0376],[-161.099,-10.0393],[-161.0947,-10.0404],[-161.09,-10.0408],[-161.0853,-10.0404],[-161.081,-10.0393],[-161.0773,-10.0376],[-161.0744,-10.0354],[-161.0726,-10.0328],[-161.072,-10.03]]]},"properties":{"name":"Rakahanga","group":"N","lon":-161.09,"lat":-10.03,"synth":true}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-160.982,-10.4],[-160.9826,-10.3972],[-160.9844,-10.3946],[-160.9873,-10.3924],[-160.991,-10.3907],[-160.9953,-10.3896],[-161,-10.3892],[-161.0047,-10.3896],[-161.009,-10.3907],[-161.0127,-10.3924],[-161.0156,-10.3946],[-161.0174,-10.3972],[-161.018,-10.4],[-161.0174,-10.4028],[-161.0156,-10.4054],[-161.0127,-10.4076],[-161.009,-10.4093],[-161.0047,-10.4104],[-161,-10.4108],[-160.9953,-10.4104],[-160.991,-10.4093],[-160.9873,-10.4076],[-160.9844,-10.4054],[-160.9826,-10.4028],[-160.982,-10.4]]]},"properties":{"name":"Manihiki","group":"N","lon":-161,"lat":-10.4,"synth":true}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-165.8054,-10.9389],[-165.8121,-10.9395],[-165.8142,-10.9479],[-165.8231,-10.947],[-165.8247,-10.9492],[-165.8152,-10.953],[-165.8038,-10.9475],[-165.8054,-10.9389]]]},"properties":{"name":"Pukapuka","group":"N","lon":-165.83,"lat":-10.88,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-165.4188,-11.5555],[-165.4185,-11.5607],[-165.4125,-11.5643],[-165.4129,-11.5592],[-165.4188,-11.5555]]]},"properties":{"name":"Nassau","group":"N","lon":-165.41,"lat":-11.55,"synth":false}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-163.1756,-13.2792],[-163.1762,-13.2813],[-163.1742,-13.2812],[-163.1756,-13.2792]]],[[[-163.0845,-13.2538],[-163.0843,-13.256],[-163.0824,-13.2581],[-163.0824,-13.2563],[-163.0845,-13.2538]]]]},"properties":{"name":"Suwarrow","group":"N","lon":-163.1,"lat":-13.25,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-163.152,-18.06],[-163.1526,-18.0572],[-163.1544,-18.0546],[-163.1573,-18.0524],[-163.161,-18.0506],[-163.1653,-18.0496],[-163.17,-18.0492],[-163.1747,-18.0496],[-163.179,-18.0506],[-163.1827,-18.0524],[-163.1856,-18.0546],[-163.1874,-18.0572],[-163.188,-18.06],[-163.1874,-18.0628],[-163.1856,-18.0654],[-163.1827,-18.0676],[-163.179,-18.0693],[-163.1747,-18.0704],[-163.17,-18.0708],[-163.1653,-18.0704],[-163.161,-18.0693],[-163.1573,-18.0676],[-163.1544,-18.0654],[-163.1526,-18.0628],[-163.152,-18.06]]]},"properties":{"name":"Palmerston","group":"S","lon":-163.17,"lat":-18.06,"synth":true}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-159.7327,-18.9466],[-159.7335,-18.946],[-159.7339,-18.9497],[-159.7324,-18.9505],[-159.7312,-18.9483],[-159.7319,-18.9468],[-159.7327,-18.9466]]],[[[-159.7358,-18.9368],[-159.7343,-18.9386],[-159.7338,-18.9372],[-159.7358,-18.9368]]],[[[-159.758,-18.9295],[-159.7571,-18.9291],[-159.7576,-18.9275],[-159.7587,-18.9278],[-159.758,-18.9295]]],[[[-159.7305,-18.9198],[-159.7312,-18.9196],[-159.7305,-18.9234],[-159.7305,-18.9285],[-159.7308,-18.932],[-159.7314,-18.9331],[-159.7341,-18.935],[-159.7321,-18.9369],[-159.7304,-18.9367],[-159.7285,-18.9355],[-159.7279,-18.9314],[-159.728,-18.9247],[-159.7292,-18.9204],[-159.7305,-18.9198]]],[[[-159.8364,-18.9131],[-159.8376,-18.9143],[-159.8366,-18.915],[-159.8332,-18.9148],[-159.8337,-18.9134],[-159.8364,-18.9131]]],[[[-159.8276,-18.9136],[-159.826,-18.9111],[-159.8266,-18.9098],[-159.8278,-18.9112],[-159.8291,-18.9135],[-159.8276,-18.9136]]],[[[-159.729,-18.9031],[-159.7305,-18.9019],[-159.7328,-18.9021],[-159.733,-18.9041],[-159.7313,-18.9053],[-159.7306,-18.9077],[-159.7309,-18.9101],[-159.7298,-18.9105],[-159.7279,-18.9096],[-159.7276,-18.9073],[-159.7281,-18.9043],[-159.729,-18.9031]]],[[[-159.7392,-18.8956],[-159.7391,-18.8944],[-159.7413,-18.8926],[-159.7426,-18.893],[-159.7416,-18.895],[-159.7392,-18.8956]]],[[[-159.7488,-18.8688],[-159.7491,-18.8675],[-159.7517,-18.8681],[-159.751,-18.8694],[-159.7495,-18.8694],[-159.7488,-18.8688]]],[[[-159.7499,-18.8641],[-159.7509,-18.8617],[-159.7514,-18.859],[-159.7529,-18.8597],[-159.7526,-18.8621],[-159.753,-18.8629],[-159.7522,-18.8654],[-159.7525,-18.8669],[-159.7498,-18.8666],[-159.7499,-18.8641]]],[[[-159.7514,-18.8577],[-159.7518,-18.856],[-159.7546,-18.8558],[-159.7547,-18.8572],[-159.7539,-18.8585],[-159.7517,-18.8583],[-159.7514,-18.8577]]],[[[-159.7545,-18.8489],[-159.7563,-18.8489],[-159.7583,-18.8506],[-159.756,-18.8515],[-159.7546,-18.8509],[-159.7545,-18.8489]]],[[[-159.7678,-18.8252],[-159.7692,-18.8243],[-159.7715,-18.8241],[-159.7748,-18.8248],[-159.7772,-18.8271],[-159.7778,-18.8301],[-159.7805,-18.834],[-159.7846,-18.8379],[-159.793,-18.8444],[-159.7948,-18.8465],[-159.7948,-18.848],[-159.7937,-18.8497],[-159.7939,-18.8529],[-159.7949,-18.8568],[-159.7957,-18.8583],[-159.798,-18.8621],[-159.7997,-18.8642],[-159.8004,-18.8658],[-159.8004,-18.868],[-159.8017,-18.8704],[-159.801,-18.8727],[-159.7995,-18.8752],[-159.7964,-18.8789],[-159.7957,-18.8802],[-159.794,-18.8849],[-159.7934,-18.8871],[-159.7917,-18.8909],[-159.7918,-18.8924],[-159.7904,-18.8931],[-159.7875,-18.8928],[-159.7852,-18.8922],[-159.7823,-18.8905],[-159.7799,-18.8885],[-159.7791,-18.8884],[-159.776,-18.8853],[-159.7738,-18.8816],[-159.7733,-18.8801],[-159.7741,-18.878],[-159.774,-18.877],[-159.7753,-18.8735],[-159.7746,-18.8715],[-159.7757,-18.8693],[-159.7759,-18.8662],[-159.7772,-18.8643],[-159.7753,-18.86],[-159.7754,-18.8593],[-159.7771,-18.8572],[-159.7774,-18.8551],[-159.7754,-18.8521],[-159.7741,-18.8484],[-159.7718,-18.8436],[-159.7699,-18.841],[-159.7676,-18.8365],[-159.7681,-18.833],[-159.7693,-18.8317],[-159.7714,-18.8315],[-159.7711,-18.8306],[-159.7696,-18.8302],[-159.7673,-18.8305],[-159.7655,-18.832],[-159.7641,-18.8339],[-159.7632,-18.8359],[-159.7607,-18.8398],[-159.7607,-18.842],[-159.7593,-18.8444],[-159.7593,-18.8455],[-159.7608,-18.847],[-159.7593,-18.849],[-159.7571,-18.8489],[-159.7565,-18.848],[-159.756,-18.8452],[-159.7579,-18.84],[-159.7608,-18.8343],[-159.765,-18.8282],[-159.7678,-18.8252]]]]},"properties":{"name":"Aitutaki","group":"S","lon":-159.78,"lat":-18.86,"synth":false}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-158.9437,-19.2625],[-158.9459,-19.2638],[-158.9439,-19.2646],[-158.9437,-19.2625]]],[[[-158.9623,-19.2621],[-158.9646,-19.2623],[-158.9698,-19.2659],[-158.9705,-19.2677],[-158.9707,-19.2696],[-158.9688,-19.2719],[-158.9668,-19.2735],[-158.9614,-19.2791],[-158.9561,-19.2853],[-158.9547,-19.2862],[-158.9518,-19.2873],[-158.9498,-19.2877],[-158.9463,-19.2872],[-158.9442,-19.2861],[-158.9414,-19.2838],[-158.9411,-19.2811],[-158.9418,-19.278],[-158.9426,-19.2786],[-158.943,-19.2817],[-158.943,-19.2839],[-158.9445,-19.2855],[-158.9471,-19.2862],[-158.9501,-19.2859],[-158.953,-19.285],[-158.955,-19.2835],[-158.957,-19.2815],[-158.9596,-19.278],[-158.9585,-19.2767],[-158.9591,-19.2735],[-158.9589,-19.2686],[-158.9578,-19.2647],[-158.9589,-19.2629],[-158.9623,-19.2621]]],[[[-158.919,-19.2582],[-158.9212,-19.2558],[-158.9239,-19.2539],[-158.9254,-19.2532],[-158.9276,-19.2529],[-158.9293,-19.2534],[-158.9311,-19.2548],[-158.9331,-19.2569],[-158.9336,-19.2588],[-158.9347,-19.2608],[-158.9366,-19.2619],[-158.937,-19.2633],[-158.9343,-19.2642],[-158.9334,-19.2651],[-158.9301,-19.2658],[-158.9284,-19.2667],[-158.9277,-19.268],[-158.9281,-19.269],[-158.9277,-19.2709],[-158.93,-19.2716],[-158.9306,-19.2729],[-158.9286,-19.274],[-158.9244,-19.2768],[-158.9227,-19.2776],[-158.9182,-19.2787],[-158.9165,-19.2785],[-158.9153,-19.2773],[-158.914,-19.2738],[-158.9135,-19.2709],[-158.914,-19.2668],[-158.915,-19.264],[-158.9177,-19.2598],[-158.919,-19.2582]]]]},"properties":{"name":"Manuae","group":"S","lon":-158.95,"lat":-19.27,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-158.2951,-19.8099],[-158.2965,-19.8109],[-158.2975,-19.8128],[-158.2941,-19.8148],[-158.2919,-19.8155],[-158.2863,-19.8157],[-158.2845,-19.8161],[-158.2826,-19.8159],[-158.2814,-19.8141],[-158.2817,-19.8118],[-158.2838,-19.809],[-158.2861,-19.8078],[-158.2882,-19.8076],[-158.2912,-19.8086],[-158.2936,-19.8103],[-158.2951,-19.8099]]]},"properties":{"name":"Takutea","group":"S","lon":-158.27,"lat":-19.81,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-157.7067,-19.84],[-157.7086,-19.8394],[-157.7121,-19.8396],[-157.7146,-19.8405],[-157.7174,-19.842],[-157.7195,-19.8442],[-157.72,-19.8472],[-157.7202,-19.8505],[-157.7198,-19.8532],[-157.7199,-19.8581],[-157.7215,-19.8656],[-157.7224,-19.868],[-157.7231,-19.8715],[-157.7231,-19.8766],[-157.7212,-19.8812],[-157.7206,-19.8835],[-157.7186,-19.8882],[-157.7169,-19.8911],[-157.713,-19.8961],[-157.7106,-19.897],[-157.708,-19.897],[-157.7061,-19.8964],[-157.7011,-19.8931],[-157.6965,-19.8906],[-157.6933,-19.8894],[-157.6865,-19.8875],[-157.684,-19.8855],[-157.6824,-19.8828],[-157.681,-19.8767],[-157.681,-19.8742],[-157.6804,-19.8688],[-157.6796,-19.8668],[-157.68,-19.866],[-157.6796,-19.8616],[-157.6799,-19.8555],[-157.6808,-19.8521],[-157.6819,-19.8499],[-157.6836,-19.848],[-157.6902,-19.8447],[-157.6932,-19.844],[-157.6968,-19.8427],[-157.6982,-19.8426],[-157.7039,-19.8403],[-157.7067,-19.84]]]},"properties":{"name":"Mitiaro","group":"S","lon":-157.7,"lat":-19.84,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-158.1207,-19.9658],[-158.1231,-19.9655],[-158.1274,-19.9661],[-158.1306,-19.9659],[-158.1344,-19.9671],[-158.136,-19.9691],[-158.1371,-19.9714],[-158.1386,-19.976],[-158.1388,-19.9772],[-158.1403,-19.9814],[-158.1415,-19.9879],[-158.1414,-19.9923],[-158.1417,-19.9954],[-158.1413,-19.9985],[-158.1397,-20.0026],[-158.1362,-20.0064],[-158.1335,-20.0087],[-158.1298,-20.0126],[-158.1258,-20.0179],[-158.121,-20.0259],[-158.1195,-20.028],[-158.1174,-20.0286],[-158.1149,-20.0271],[-158.1121,-20.0243],[-158.1078,-20.0209],[-158.102,-20.0175],[-158.098,-20.0161],[-158.0936,-20.0152],[-158.0908,-20.0144],[-158.0885,-20.0122],[-158.0864,-20.0107],[-158.0832,-20.0073],[-158.0823,-20.0061],[-158.0824,-20.0038],[-158.0836,-20.0002],[-158.0843,-19.9964],[-158.0864,-19.9928],[-158.094,-19.9841],[-158.0977,-19.9808],[-158.0996,-19.9784],[-158.1018,-19.9769],[-158.1036,-19.9743],[-158.1051,-19.9734],[-158.1068,-19.9713],[-158.1086,-19.97],[-158.1129,-19.9686],[-158.1142,-19.9676],[-158.1165,-19.9668],[-158.1192,-19.9664],[-158.1207,-19.9658]]]},"properties":{"name":"Atiu","group":"S","lon":-158.12,"lat":-19.99,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-157.3494,-20.1339],[-157.3528,-20.1328],[-157.3545,-20.1331],[-157.3561,-20.1355],[-157.3562,-20.1388],[-157.3571,-20.1431],[-157.358,-20.1448],[-157.3599,-20.1504],[-157.3606,-20.1545],[-157.3605,-20.1601],[-157.36,-20.1638],[-157.3594,-20.1694],[-157.3585,-20.1719],[-157.3558,-20.1772],[-157.3537,-20.1801],[-157.3517,-20.1814],[-157.3503,-20.183],[-157.346,-20.1858],[-157.3432,-20.187],[-157.3406,-20.1885],[-157.3389,-20.1886],[-157.3366,-20.1879],[-157.3338,-20.1855],[-157.3319,-20.1845],[-157.3281,-20.182],[-157.3248,-20.1788],[-157.324,-20.177],[-157.3231,-20.1722],[-157.3223,-20.1692],[-157.3216,-20.1601],[-157.3222,-20.1574],[-157.3222,-20.1552],[-157.3238,-20.149],[-157.3253,-20.1453],[-157.3275,-20.143],[-157.3295,-20.1425],[-157.3312,-20.1416],[-157.3348,-20.1404],[-157.339,-20.1382],[-157.3442,-20.1358],[-157.3462,-20.1356],[-157.3467,-20.1349],[-157.3494,-20.1339]]]},"properties":{"name":"Mauke","group":"S","lon":-157.34,"lat":-20.16,"synth":false}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-159.7248,-21.2508],[-159.726,-21.2518],[-159.7269,-21.2534],[-159.7258,-21.2543],[-159.7243,-21.2534],[-159.7242,-21.2519],[-159.7248,-21.2508]]],[[[-159.7267,-21.2496],[-159.7249,-21.249],[-159.7238,-21.2475],[-159.7247,-21.2463],[-159.7266,-21.2464],[-159.7267,-21.2496]]],[[[-159.7904,-21.2004],[-159.7948,-21.1988],[-159.7982,-21.1987],[-159.8008,-21.1989],[-159.8025,-21.2003],[-159.8044,-21.2005],[-159.8064,-21.1999],[-159.8112,-21.1998],[-159.8137,-21.2009],[-159.8166,-21.2015],[-159.8172,-21.2029],[-159.8192,-21.2039],[-159.8231,-21.2079],[-159.8251,-21.2094],[-159.8274,-21.2121],[-159.8301,-21.2159],[-159.8311,-21.2195],[-159.8308,-21.2235],[-159.8297,-21.2267],[-159.8287,-21.2312],[-159.8282,-21.2352],[-159.8282,-21.2375],[-159.8266,-21.2435],[-159.8246,-21.2462],[-159.8238,-21.2481],[-159.8202,-21.2539],[-159.8187,-21.2559],[-159.8153,-21.2575],[-159.8096,-21.2577],[-159.8071,-21.2585],[-159.8051,-21.2588],[-159.799,-21.2612],[-159.7984,-21.2617],[-159.7938,-21.2641],[-159.7871,-21.2652],[-159.7817,-21.2656],[-159.78,-21.2661],[-159.7777,-21.2658],[-159.7752,-21.2661],[-159.7681,-21.2676],[-159.7625,-21.2714],[-159.761,-21.272],[-159.7558,-21.2728],[-159.7507,-21.2725],[-159.7446,-21.2715],[-159.7395,-21.2695],[-159.7363,-21.2677],[-159.7353,-21.2664],[-159.735,-21.2643],[-159.7328,-21.2621],[-159.7314,-21.2581],[-159.7286,-21.2556],[-159.7285,-21.2533],[-159.7296,-21.2518],[-159.7299,-21.2487],[-159.7294,-21.2473],[-159.728,-21.2464],[-159.7277,-21.2446],[-159.7247,-21.2434],[-159.7247,-21.2423],[-159.7266,-21.2403],[-159.7277,-21.2385],[-159.7298,-21.233],[-159.7318,-21.2261],[-159.7326,-21.2204],[-159.7334,-21.2173],[-159.735,-21.2157],[-159.7385,-21.2138],[-159.7449,-21.2094],[-159.7466,-21.2077],[-159.7519,-21.204],[-159.7542,-21.2032],[-159.7577,-21.2027],[-159.763,-21.203],[-159.7711,-21.205],[-159.7738,-21.2052],[-159.7752,-21.2061],[-159.7789,-21.2047],[-159.78,-21.204],[-159.782,-21.2038],[-159.7836,-21.2029],[-159.7846,-21.2051],[-159.7865,-21.2025],[-159.7893,-21.2008],[-159.7904,-21.2004]]]]},"properties":{"name":"Rarotonga","group":"S","lon":-159.79,"lat":-21.24,"synth":false}},{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-157.913,-21.8911],[-157.9149,-21.8916],[-157.9158,-21.8913],[-157.9216,-21.8919],[-157.9225,-21.8923],[-157.9282,-21.8935],[-157.9327,-21.8951],[-157.9344,-21.8954],[-157.9392,-21.8971],[-157.9433,-21.8984],[-157.9475,-21.9007],[-157.9503,-21.9044],[-157.9526,-21.9106],[-157.9534,-21.9115],[-157.955,-21.917],[-157.9565,-21.9207],[-157.959,-21.9257],[-157.9599,-21.9301],[-157.9611,-21.9344],[-157.9612,-21.9364],[-157.9588,-21.9431],[-157.9578,-21.9446],[-157.9555,-21.9466],[-157.9469,-21.9508],[-157.9434,-21.9531],[-157.9368,-21.9578],[-157.9333,-21.9591],[-157.9318,-21.959],[-157.9276,-21.9582],[-157.922,-21.9569],[-157.9188,-21.9567],[-157.9141,-21.9558],[-157.9066,-21.9552],[-157.9038,-21.9546],[-157.9005,-21.9545],[-157.8933,-21.9552],[-157.8907,-21.9559],[-157.8886,-21.956],[-157.8861,-21.9569],[-157.8836,-21.9571],[-157.8802,-21.9565],[-157.8773,-21.9545],[-157.8762,-21.9532],[-157.8751,-21.95],[-157.8745,-21.943],[-157.8747,-21.9367],[-157.8753,-21.9343],[-157.8785,-21.9299],[-157.8794,-21.9293],[-157.89,-21.919],[-157.8924,-21.9158],[-157.8971,-21.9103],[-157.9032,-21.9005],[-157.9045,-21.8975],[-157.9063,-21.8945],[-157.9089,-21.8921],[-157.9113,-21.8912],[-157.913,-21.8911]]]},"properties":{"name":"Mangaia","group":"S","lon":-157.92,"lat":-21.93,"synth":false}}]}</script>
+<script>
+  // ---- seamless Cook Islands chart ----
+  (function(){
+    if(typeof L==='undefined')return;
+    const COOK=JSON.parse(document.getElementById('cook-data').textContent);
+    const INK='#1A1A17', RED='#9C2B1B';
+    const PERM=new Set(["Penrhyn","Pukapuka","Manihiki","Suwarrow","Palmerston","Aitutaki","Atiu","Mangaia","Rarotonga"]);
+    const map=L.map('cookmap',{zoomControl:false,attributionControl:false,scrollWheelZoom:false,
+      doubleClickZoom:true,dragging:true,maxBoundsViscosity:1,zoomSnap:.25});
+    // graticule — the chart grid doubles as a net
+    for(let lo=-166;lo<=-156;lo+=2)L.polyline([[-8,lo],[-22.6,lo]],{color:INK,weight:.5,opacity:.1,interactive:false}).addTo(map);
+    for(let la=-10;la>=-22;la-=2)L.polyline([[la,-166.5],[la,-155.5]],{color:INK,weight:.5,opacity:.1,interactive:false}).addTo(map);
+    // the net — a Delaunay mesh roping every island to its neighbours: a true
+    // triangular weave whose lines never cross, with big spans bridging the
+    // northern and southern groups across the open ocean between them
+    const pts=COOK.features.map(f=>({name:f.properties.name,lat:f.properties.lat,lon:f.properties.lon}));
+    function delaunayEdges(P){
+      const EPS=1e-9, n=P.length;
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      P.forEach(p=>{minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y);});
+      const dmax=Math.max(maxX-minX,maxY-minY)||1, mx=(minX+maxX)/2, my=(minY+maxY)/2;
+      // a super-triangle big enough to enclose every point
+      const v=P.concat([{x:mx-20*dmax,y:my-dmax},{x:mx,y:my+20*dmax},{x:mx+20*dmax,y:my-dmax}]);
+      const circum=(a,b,c)=>{
+        const ax=v[a].x,ay=v[a].y,bx=v[b].x,by=v[b].y,cx=v[c].x,cy=v[c].y;
+        const d=2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));
+        if(Math.abs(d)<EPS)return {x:0,y:0,r2:Infinity};
+        const a2=ax*ax+ay*ay,b2=bx*bx+by*by,c2=cx*cx+cy*cy;
+        const ux=(a2*(by-cy)+b2*(cy-ay)+c2*(ay-by))/d;
+        const uy=(a2*(cx-bx)+b2*(ax-cx)+c2*(bx-ax))/d;
+        return {x:ux,y:uy,r2:(ax-ux)**2+(ay-uy)**2};
+      };
+      const has=(t,x)=>t.p[0]===x||t.p[1]===x||t.p[2]===x;
+      let tris=[{p:[n,n+1,n+2],c:circum(n,n+1,n+2)}];
+      for(let i=0;i<n;i++){
+        const bad=tris.filter(t=>((v[i].x-t.c.x)**2+(v[i].y-t.c.y)**2)<=t.c.r2+EPS);
+        const poly=[];
+        bad.forEach(t=>{
+          [[t.p[0],t.p[1]],[t.p[1],t.p[2]],[t.p[2],t.p[0]]].forEach(ed=>{
+            if(!bad.some(t2=>t2!==t&&has(t2,ed[0])&&has(t2,ed[1])))poly.push(ed);
+          });
+        });
+        tris=tris.filter(t=>!bad.includes(t));
+        poly.forEach(ed=>tris.push({p:[ed[0],ed[1],i],c:circum(ed[0],ed[1],i)}));
+      }
+      const out=new Set();
+      tris.forEach(t=>{
+        if(t.p.some(x=>x>=n))return;            // drop anything touching the super-triangle
+        [[t.p[0],t.p[1]],[t.p[1],t.p[2]],[t.p[2],t.p[0]]]
+          .forEach(([a,b])=>out.add(a<b?a+'-'+b:b+'-'+a));
+      });
+      return [...out].map(s=>s.split('-').map(Number));
+    }
+    delaunayEdges(pts.map(p=>({x:p.lon,y:p.lat}))).forEach(([i,j])=>{
+      L.polyline([[pts[i].lat,pts[i].lon],[pts[j].lat,pts[j].lon]],
+        {color:RED,weight:.8,opacity:.4,interactive:false}).addTo(map);
+    });
+    const layer=L.geoJSON(COOK,{
+      style:f=>({color:INK,weight:.6,opacity:.9,fillColor:f.properties.name==='Rarotonga'?RED:INK,fillOpacity:.92}),
+      onEachFeature:(f,l)=>{
+        const p=f.properties, cap=p.name==='Rarotonga';
+        l.bindTooltip(p.name,{permanent:PERM.has(p.name),direction:'top',offset:[0,-2],
+          className:'island-label'+(cap?' cap':'')});
+      }
+    }).addTo(map);
+    const b=layer.getBounds();
+    map.fitBounds(b.pad(0.12));
+    map.setMinZoom(map.getZoom());
+    map.setMaxBounds(b.pad(0.5));
+    const r=COOK.features.find(f=>f.properties.name==='Rarotonga').properties;
+    L.circleMarker([r.lat,r.lon],{radius:8,color:RED,weight:1,fill:false,interactive:false}).addTo(map);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+  })();
+
+  const nav=document.getElementById('nav');
+  addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>20));
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+  document.querySelectorAll('.rv:not(.in)').forEach((el,i)=>{el.style.transitionDelay=(i%4*55)+'ms';io.observe(el)});
+</script>
+</body>
+</html>
