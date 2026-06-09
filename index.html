@@ -388,7 +388,6 @@
     if(typeof L==='undefined')return;
     const COOK=JSON.parse(document.getElementById('cook-data').textContent);
     const INK='#1A1A17', RED='#9C2B1B';
-    const PERM=new Set(["Penrhyn","Pukapuka","Manihiki","Suwarrow","Palmerston","Aitutaki","Atiu","Mangaia","Rarotonga"]);
     const map=L.map('cookmap',{zoomControl:false,attributionControl:false,scrollWheelZoom:false,
       doubleClickZoom:true,dragging:true,maxBoundsViscosity:1,zoomSnap:.25});
     // graticule — the chart grid doubles as a net
@@ -439,21 +438,64 @@
       L.polyline([[pts[i].lat,pts[i].lon],[pts[j].lat,pts[j].lon]],
         {color:RED,weight:.8,opacity:.4,interactive:false}).addTo(map);
     });
+    // every island carries a permanent label; a force pass below de-conflicts them
+    const labelRefs=[];
     const layer=L.geoJSON(COOK,{
       style:f=>({color:INK,weight:.6,opacity:.9,fillColor:f.properties.name==='Rarotonga'?RED:INK,fillOpacity:.92}),
       onEachFeature:(f,l)=>{
         const p=f.properties, cap=p.name==='Rarotonga';
-        l.bindTooltip(p.name,{permanent:PERM.has(p.name),direction:'top',offset:[0,-2],
+        l.bindTooltip(p.name,{permanent:true,direction:'center',offset:[0,-10],
           className:'island-label'+(cap?' cap':'')});
+        labelRefs.push({layer:l,name:p.name,lat:p.lat,lon:p.lon});
       }
     }).addTo(map);
     const b=layer.getBounds();
-    map.fitBounds(b.pad(0.12));
+    map.fitBounds(b.pad(0.12),{animate:false});
     map.setMinZoom(map.getZoom());
     map.setMaxBounds(b.pad(0.5));
     const r=COOK.features.find(f=>f.properties.name==='Rarotonga').properties;
     L.circleMarker([r.lat,r.lon],{radius:8,color:RED,weight:1,fill:false,interactive:false}).addTo(map);
     L.control.zoom({position:'bottomright'}).addTo(map);
+
+    // ---- label de-confliction: keep all 15 labels readable & non-overlapping ----
+    // Each label tethers just above its island, then labels repel one another on
+    // their shallower axis of overlap until none collide. Re-run whenever the map
+    // zooms (relative screen spacing changes); pan needs no recompute since every
+    // label keeps a constant pixel offset from its island.
+    function declutter(){
+      const size=map.getSize(), W=size.x, H=size.y, pad=3, GAP=10;
+      const items=labelRefs.map(ref=>{
+        const tt=ref.layer.getTooltip();
+        const a=map.latLngToContainerPoint((tt&&tt.getLatLng())||L.latLng(ref.lat,ref.lon));
+        const el=tt&&tt.getElement();
+        const w=(el?el.offsetWidth:ref.name.length*6)+6;
+        const h=(el?el.offsetHeight:12)+4;
+        return {tt,ax:a.x,ay:a.y,w,h,x:a.x,y:a.y-h/2-GAP};   // x,y = label box CENTRE
+      });
+      for(let it=0;it<170;it++){
+        items.forEach(s=>{                                    // tether toward just above the dot
+          s.x+=(s.ax-s.x)*0.06;
+          s.y+=((s.ay-s.h/2-GAP)-s.y)*0.06;
+        });
+        for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+          const A=items[i],B=items[j];
+          const ox=Math.min(A.x+A.w/2,B.x+B.w/2)-Math.max(A.x-A.w/2,B.x-B.w/2);
+          const oy=Math.min(A.y+A.h/2,B.y+B.h/2)-Math.max(A.y-A.h/2,B.y-B.h/2);
+          if(ox>0&&oy>0){                                     // overlapping: separate on shallower axis
+            if(ox<oy){const p=(ox/2+0.5)*(A.x<B.x?-1:1);A.x+=p;B.x-=p;}
+            else{const p=(oy/2+0.5)*(A.y<B.y?-1:1);A.y+=p;B.y-=p;}
+          }
+        }
+        items.forEach(s=>{                                    // keep within the visible map
+          s.x=Math.max(pad+s.w/2,Math.min(W-pad-s.w/2,s.x));
+          s.y=Math.max(pad+s.h/2,Math.min(H-pad-s.h/2,s.y));
+        });
+      }
+      items.forEach(s=>{s.tt.options.offset=[Math.round(s.x-s.ax),Math.round(s.y-s.ay)];s.tt.update();});
+    }
+    map.whenReady(()=>requestAnimationFrame(declutter));
+    setTimeout(declutter,90);
+    map.on('zoomend',()=>requestAnimationFrame(declutter));
   })();
 
   const nav=document.getElementById('nav');
